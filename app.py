@@ -122,16 +122,15 @@ def register():
 def insert_coasters_from_csv(csv_file):
     with open(csv_file, 'r', newline='', encoding='utf-8') as file:
         csv_reader = csv.DictReader(file)
-        inserted_names = set()  # To keep track of inserted coaster names
+        id=0
         for row in csv_reader:
             name = row['Name'].strip()
-            
-            # Skip duplicates within the same CSV upload session
-            if name in inserted_names:
-                continue
+            park = row.get('Park', '').strip()
+            location = row.get('Location', '').strip()
 
-            if Coaster.query.filter_by(name=name).first():
-                continue
+            # Check if the coaster already exists based on name, park, and location
+            if Coaster.query.filter_by(name=name, park=park, location=location).first():
+                continue  # Skip this entry if it already exists
 
             # Safely convert numerical fields
             try:
@@ -142,31 +141,44 @@ def insert_coasters_from_csv(csv_file):
                 inversions = int(row['Inversions']) if row['Inversions'].strip() else None
                 vertical_angle = float(row['Vertical Angle']) if row['Vertical Angle'].strip() else None
                 duration = float(row['Duration']) if row['Duration'].strip() else None
-            except ValueError as e:
-                continue  # Skip to the next row if conversion fails
+            except ValueError:
+                length = None
+                height = None
+                drop = None
+                speed = None
+                inversions = None
+                vertical_angle = None
+                duration = None
 
+            # Create the coaster instance
+            coaster = Coaster(
+                id=id,
+                name=name,
+                park=park,
+                location=location,
+                opening_date=row.get('Opening Date', '').strip() or None,
+                length=length,
+                height=height,
+                drop=drop,
+                speed=speed,
+                inversions=inversions,
+                vertical_angle=vertical_angle,
+                duration=duration,
+                rcdb_link=row.get('RCDB Link', '').strip() or None
+            )
+            id += 1
+            # Attempt to add to the database
             try:
-                coaster = Coaster(
-                    name=name,
-                    park=row.get('Park', None),
-                    location=row.get('Location', None),
-                    opening_date=row.get('Opening Date', None),
-                    length=length,
-                    height=height,
-                    drop=drop,
-                    speed=speed,
-                    inversions=inversions,
-                    vertical_angle=vertical_angle,
-                    duration=duration,
-                    rcdb_link=row.get('RCDB Link', None)
-                )
                 db.session.add(coaster)
                 db.session.commit()
-                inserted_names.add(name)
             except IntegrityError:
+                # Roll back if there's a database error (e.g., duplicate entry)
                 db.session.rollback()
             except Exception as e:
+                # Log other exceptions and roll back
+                print(f"Failed to insert {name} at {park} in {location}: {e}")
                 db.session.rollback()
+
 
 if __name__ == "__main__": 
     with app.app_context(): 
