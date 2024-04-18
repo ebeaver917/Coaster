@@ -73,11 +73,16 @@ class LoginForm(FlaskForm):
 
     submit = SubmitField('Login')
 
+class SearchForm(FlaskForm):
+    search_query = StringField('Search', validators=[InputRequired()])
+    submit = SubmitField('Search')
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def home():
-    coasters = Coaster.query.all()
-    return render_template('home.html', coasters=coasters)
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    return render_template('home.html')
+
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -95,8 +100,13 @@ def login():
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
-
+    search_form = SearchForm() 
+    coasters = None  
+    if search_form.validate_on_submit():
+        search_query = search_form.search_query.data
+        coasters = Coaster.query.filter(Coaster.name.ilike(f'%{search_query}%')).all()
+    
+    return render_template('dashboard.html', search_form=search_form, coasters=coasters)
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
