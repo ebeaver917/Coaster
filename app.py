@@ -46,7 +46,16 @@ class Coaster(db.Model):
     duration = db.Column(db.Float)
     rcdb_link = db.Column(db.String(200))
     
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    coaster_id = db.Column(db.Integer, db.ForeignKey('coaster.id'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)  # Assuming ratings are integers
+    content = db.Column(db.Text, nullable=False)
 
+    user = db.relationship('User', backref=db.backref('reviews', lazy=True))
+    coaster = db.relationship('Coaster', backref=db.backref('reviews', lazy=True))
+    
 class RegisterForm(FlaskForm):
     username = StringField(validators=[
         InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
@@ -76,6 +85,11 @@ class LoginForm(FlaskForm):
 class SearchForm(FlaskForm):
     search_query = StringField('Search', validators=[InputRequired()])
     submit = SubmitField('Search')
+    
+class ReviewForm(FlaskForm):
+    rating = StringField('Rating', validators=[InputRequired()])
+    content = StringField('Review', validators=[InputRequired()])
+    submit = SubmitField('Submit Review')
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -93,20 +107,6 @@ def home():
 
     return render_template('home.html', form=form)
 
-
-'''
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user:
-            if bcrypt.check_password_hash(user.password, form.password.data):
-                login_user(user)
-                return redirect(url_for('dashboard'))
-    return render_template('login.html', form=form)
-'''
-
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
@@ -115,29 +115,56 @@ def dashboard():
     if search_form.validate_on_submit():
         search_query = search_form.search_query.data
         coasters = Coaster.query.filter(Coaster.name.ilike(f'%{search_query}%')).all()
-    
-    return render_template('dashboard.html', search_form=search_form, coasters=coasters)
+
+    # Fetch reviews written by the logged-in user
+    user_reviews = Review.query.filter_by(user_id=current_user.id).all()
+
+    return render_template('dashboard.html', search_form=search_form, coasters=coasters, user_reviews=user_reviews)
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('login'))
-
+    return redirect(url_for('home'))
 
 @ app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
-
     if form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(form.password.data)
         new_user = User(username=form.username.data, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        return redirect(url_for('login'))
+        return redirect(url_for('home'))  
 
     return render_template('register.html', form=form)
 
+@app.route('/review', methods=['GET', 'POST'])
+@login_required
+def review():
+    search_form = SearchForm()
+    review_form = ReviewForm()
+    coasters = None
+
+    if search_form.validate_on_submit():
+        search_query = search_form.search_query.data
+        coasters = Coaster.query.filter(Coaster.name.ilike(f'%{search_query}%')).all()
+    
+    if 'submit_review' in request.form and review_form.validate_on_submit():
+        coaster_id = request.form.get('coaster_select')
+        if coaster_id:
+            new_review = Review(
+                user_id=current_user.id,
+                coaster_id=coaster_id,
+                rating=review_form.rating.data,
+                content=review_form.content.data
+            )
+            db.session.add(new_review)
+            db.session.commit()
+            flash('Review added successfully!')
+            return redirect(url_for('dashboard'))
+
+    return render_template('review.html', search_form=search_form, review_form=review_form, coasters=coasters)
 
 def insert_coasters_from_csv(csv_file):
     with open(csv_file, 'r', newline='', encoding='utf-8') as file:
@@ -148,11 +175,9 @@ def insert_coasters_from_csv(csv_file):
             park = row.get('Park', '').strip()
             location = row.get('Location', '').strip()
 
-            # Check if the coaster already exists based on name, park, and location
             if Coaster.query.filter_by(name=name, park=park, location=location).first():
-                continue  # Skip this entry if it already exists
+                continue 
 
-            # Safely convert numerical fields
             try:
                 length = float(row['Length']) if row['Length'].strip() else None
                 height = float(row['Height']) if row['Height'].strip() else None
@@ -170,7 +195,6 @@ def insert_coasters_from_csv(csv_file):
                 vertical_angle = None
                 duration = None
 
-            # Create the coaster instance
             coaster = Coaster(
                 id=id,
                 name=name,
@@ -187,15 +211,12 @@ def insert_coasters_from_csv(csv_file):
                 rcdb_link=row.get('RCDB Link', '').strip() or None
             )
             id += 1
-            # Attempt to add to the database
             try:
                 db.session.add(coaster)
                 db.session.commit()
             except IntegrityError:
-                # Roll back if there's a database error (e.g., duplicate entry)
                 db.session.rollback()
             except Exception as e:
-                # Log other exceptions and roll back
                 print(f"Failed to insert {name} at {park} in {location}: {e}")
                 db.session.rollback()
 

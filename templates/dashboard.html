@@ -7,20 +7,26 @@
 <body>
     <h1>Dashboard</h1>
     <h2>Welcome, {{ current_user.username }}</h2>
-    <form method="POST" action="{{ url_for('dashboard') }}">
-        {{ search_form.hidden_tag() }}
-        <label for="search_query">Search for a coaster:</label>
-        {{ search_form.search_query(size=30) }} {{ search_form.submit() }}
-    </form>
-    <hr>
-    {% if coasters %}
-        <h3>Search Results:</h3>
+    <!-- Link to write a review -->
+    <a href="{{ url_for('review') }}">Write a Review</a>
+    
+    <!-- Display user reviews -->
+    <h3>Your Reviews:</h3>
+    {% if user_reviews %}
         <ul>
-            {% for coaster in coasters %}
-            <li>{{ coaster.name }} - {{ coaster.park }} - {{ coaster.location }}</li>
+            {% for review in user_reviews %}
+                <li>
+                    <strong>Coaster:</strong> {{ review.coaster.name }}<br>
+                    <strong>Rating:</strong> {{ review.rating }}/5<br>
+                    <strong>Comment:</strong> {{ review.content }}
+                </li>
             {% endfor %}
         </ul>
+    {% else %}
+        <p>You have not written any reviews yet.</p>
     {% endif %}
+
+    <hr>
     <a href="{{ url_for('logout') }}">Logout</a>
 </body>
 </html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Write a Review</title>
+</head>
+<body>
+    <h1>Write a Review</h1>
+    <form method="POST">
+        {{ search_form.hidden_tag() }}
+        {{ search_form.search_query.label }} {{ search_form.search_query() }}
+        {{ search_form.submit() }}
+    </form>
+    <hr>
+    {% if coasters %}
+        <form method="POST">
+            {{ review_form.hidden_tag() }}
+            <select name="coaster_select">
+                {% for coaster in coasters %}
+                <option value="{{ coaster.id }}">
+                    {{ coaster.name }} - {{ coaster.park }} - {{ coaster.location }}
+                </option>
+                {% endfor %}
+            </select>
+            {{ review_form.rating.label }} {{ review_form.rating() }}
+            {{ review_form.content.label }} {{ review_form.content() }}
+            <input type="submit" name="submit_review" value="Submit Review">
+        </form>
+    {% endif %}
+</body>
+</html>
