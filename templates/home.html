@@ -10,28 +10,5 @@
     <h1>Welcome to the Coaster Tracker!</h1>
     <a href="{{ url_for('login') }}">Login Page</a><br>
     <a href="{{ url_for('register') }}">Register Page</a><br>
-
-    <h2>Coaster List</h2>
-    <ul>
-        {% for coaster in coasters %}
-        <li>
-            <h3>{{ coaster.name }}</h3>
-            <p>ID: {{ coaster.id }}</p>
-            <p>Park: {{ coaster.park }}</p>
-            <p>Location: {{ coaster.location }}</p>
-            <p>Opening Date: {{ coaster.opening_date }}</p>
-            <p>Length: {{ coaster.length }} meters</p>
-            <p>Height: {{ coaster.height }} meters</p>
-            <p>Drop: {{ coaster.drop }} meters</p>
-            <p>Speed: {{ coaster.speed }} km/h</p>
-            <p>Inversions: {{ coaster.inversions }}</p>
-            <p>Vertical Angle: {{ coaster.vertical_angle }} degrees</p>
-            <p>Duration: {{ coaster.duration }} minutes</p>
-            <p>Link: <a href="{{ coaster.rcdb_link }}">RCDB Link</a></p>
-        </li>
-        {% else %}
-        <p>No coasters found.</p>
-        {% endfor %}
-    </ul>
 </body>
 </html>
