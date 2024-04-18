@@ -1,4 +1,4 @@
-from flask import Flask, render_template, url_for, redirect
+from flask import *
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
@@ -81,10 +81,20 @@ class SearchForm(FlaskForm):
 def home():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-    return render_template('home.html')
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user and bcrypt.check_password_hash(user.password, form.password.data):
+            login_user(user)
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid username or password', 'error')  # Assuming you have flash messaging set up
+
+    return render_template('home.html', form=form)
 
 
-
+'''
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -95,7 +105,7 @@ def login():
                 login_user(user)
                 return redirect(url_for('dashboard'))
     return render_template('login.html', form=form)
-
+'''
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
