@@ -7,17 +7,35 @@
 <body>
     <h1>Dashboard</h1>
     <h2>Welcome, {{ current_user.username }}</h2>
-    <!-- Link to write a review -->
-    <a href="{{ url_for('review') }}">Write a Review</a>
-    
-    <!-- Display user reviews -->
+
+    <h3>Search for a Roller Coaster:</h3>
+    <form method="POST">
+        {{ search_form.hidden_tag() }}
+        {{ search_form.search_query.label }} {{ search_form.search_query(size=20) }}
+        {{ search_form.submit() }}
+    </form>
+
+    <!-- Display Search Results -->
+    {% if coasters %}
+        <h3>Search Results:</h3>
+        <ul>
+            {% for coaster in coasters %}
+                <li>
+                    {{ coaster.name }} - 
+                    <a href="{{ url_for('coaster_details', coaster_id=coaster.id) }}">View Details</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <!-- Display User Reviews -->
     <h3>Your Reviews:</h3>
     {% if user_reviews %}
         <ul>
             {% for review in user_reviews %}
                 <li>
                     <strong>Coaster:</strong> {{ review.coaster.name }}<br>
-                    <strong>Rating:</strong> {{ review.rating }}/5<br>
+                    <strong>Rating:</strong> {{ review.rating }}/10<br>
                     <strong>Comment:</strong> {{ review.content }}
                 </li>
             {% endfor %}

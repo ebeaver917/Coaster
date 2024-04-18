@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ coaster.name }} Details</title>
+</head>
+<body>
+    <h1>{{ coaster.name }} Details</h1>
+    <p><strong>Park:</strong> {{ coaster.park }}</p>
+    <p><strong>Location:</strong> {{ coaster.location }}</p>
+    <p><strong>Opening Date:</strong> {{ coaster.opening_date }}</p>
+    <p><strong>Length:</strong> {{ coaster.length }} meters</p>
+    <p><strong>Height:</strong> {{ coaster.height }} meters</p>
+    <p><strong>Drop:</strong> {{ coaster.drop }} meters</p>
+    <p><strong>Speed:</strong> {{ coaster.speed }} km/h</p>
+    <p><strong>Inversions:</strong> {{ coaster.inversions }}</p>
+    <p><strong>Vertical Angle:</strong> {{ coaster.vertical_angle }} degrees</p>
+    <p><strong>Duration:</strong> {{ coaster.duration }} minutes</p>
+    <p><strong>RCDB Link:</strong> <a href="{{ coaster.rcdb_link }}" target="_blank">View on RCDB</a></p>
+
+    <h3>Write a Review</h3>
+    <form method="POST">
+        {{ review_form.hidden_tag() }}
+        {{ review_form.rating.label }} {{ review_form.rating() }}<br>
+        {{ review_form.content.label }} {{ review_form.content() }}<br>
+        {{ review_form.submit() }}
+    </form>
+
+    <h3>Reviews:</h3>
+    {% if reviews %}
+        <ul>
+            {% for review, username in reviews %}
+                <li>
+                    <strong>{{ username }}:</strong> Rated {{ review.rating }}/10<br>
+                    <em>"{{ review.content }}"</em>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No reviews yet. Be the first to write one!</p>
+    {% endif %}
+
+    <hr>
+    <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+</body>
+</html>
