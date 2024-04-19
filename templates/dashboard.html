@@ -9,25 +9,26 @@
     <h2>Welcome, {{ current_user.username }}</h2>
 
     <h3>Search for a Roller Coaster:</h3>
-    <form method="POST" action="{{ url_for('dashboard') }}"> <!-- Ensure the form has the correct action -->
+    <form method="POST">
         {{ search_form.hidden_tag() }}
         {{ search_form.search_query.label }} {{ search_form.search_query(size=20) }}
         {{ search_form.submit() }}
     </form>
 
+    <!-- Display Search Results -->
     {% if coasters %}
-        <h3>Search Results:</h3>
+    <h3>Search Results:</h3>
         <ul>
             {% for coaster in coasters %}
                 <li>
-                    {{ coaster.name }} - 
-                    <a href="{{ url_for('coaster_details', coaster_id=coaster.id) }}">View Details</a> |
-                    <a href="{{ url_for('add_to_top_ten', coaster_id=coaster.id, rank=10) }}">Add to Top 10</a>
+                    <strong>{{ coaster.name }}</strong> - {{ coaster.park }}, {{ coaster.location }}
+                    <!-- Add any links or actions for each coaster -->
                 </li>
             {% endfor %}
         </ul>
     {% endif %}
 
+    <!-- Display User Reviews -->
     <h3>Your Reviews:</h3>
     {% if user_reviews %}
         <ul>
@@ -42,33 +43,6 @@
     {% else %}
         <p>You have not written any reviews yet.</p>
     {% endif %}
-
-    <h3>Your Top 10 Favorite Roller Coasters:</h3>
-    <ol>
-        {% for rank in range(1, 11) %}
-            {% set favorite = user_top_ten | selectattr('rank', 'equalto', rank) | list | first %}
-            <li>
-                {% if favorite %}
-                    {{ favorite.coaster.name }}
-                    <form method="POST" action="{{ url_for('remove_from_top_ten', favorite_id=favorite.id) }}">
-                        <button type="submit">Remove</button>
-                    </form>
-                {% else %}
-                    <!-- Dropdown to add a coaster to this rank -->
-                    <form method="POST" action="{{ url_for('add_to_top_ten') }}">
-                        <select name="coaster_id">
-                            {% for coaster in all_coasters %}
-                                <option value="{{ coaster.id }}">{{ coaster.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <input type="hidden" name="rank" value="{{ rank }}">
-                        <button type="submit">Add to Top 10</button>
-                    </form>
-                {% endif %}
-            </li>
-        {% endfor %}
-    </ol>
-
 
     <hr>
     <a href="{{ url_for('logout') }}">Logout</a>
