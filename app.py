@@ -56,6 +56,18 @@ class Review(db.Model):
     user = db.relationship('User', backref=db.backref('reviews', lazy=True))
     coaster = db.relationship('Coaster', backref=db.backref('reviews', lazy=True))
     
+class TopTenFavorite(db.Model):
+    __tablename__ = 'top_ten_favorites'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    coaster_id = db.Column(db.Integer, db.ForeignKey('coaster.id'), nullable=False)
+    rank = db.Column(db.Integer, nullable=False) 
+
+    user = db.relationship('User', backref='top_ten_favorites')
+    coaster = db.relationship('Coaster', backref='top_ten_favorites')
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'rank', name='_user_rank_uc'),)
+    
 class RegisterForm(FlaskForm):
     username = StringField(validators=[
         InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
@@ -112,13 +124,24 @@ def home():
 def dashboard():
     search_form = SearchForm() 
     coasters = None  
+    all_coasters = Coaster.query.all()  # Fetch all coasters to fill the dropdowns
+
     if search_form.validate_on_submit():
         search_query = search_form.search_query.data
         coasters = Coaster.query.filter(Coaster.name.ilike(f'%{search_query}%')).all()
 
+    user_top_ten = TopTenFavorite.query.filter_by(user_id=current_user.id).order_by(TopTenFavorite.rank.asc()).all()
     user_reviews = Review.query.filter_by(user_id=current_user.id).all()
 
-    return render_template('dashboard.html', search_form=search_form, coasters=coasters, user_reviews=user_reviews)
+    return render_template(
+        'dashboard.html', 
+        search_form=search_form, 
+        coasters=coasters, 
+        user_reviews=user_reviews, 
+        user_top_ten=user_top_ten, 
+        all_coasters=all_coasters  # Pass all coasters to the template
+    )
+
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
@@ -189,6 +212,23 @@ def coaster_details(coaster_id):
                 .all())
 
     return render_template('coaster_details.html', coaster=coaster, reviews=reviews, review_form=review_form)
+
+@app.route('/add_to_top_ten', methods=['POST'])
+@login_required
+def add_to_top_ten():
+    coaster_id = request.form.get('coaster_id')
+    rank = request.form.get('rank')
+    existing_entry = TopTenFavorite.query.filter_by(user_id=current_user.id, rank=rank).first()
+    if existing_entry:
+        flash('Rank already filled, please remove the existing coaster first.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    new_favorite = TopTenFavorite(user_id=current_user.id, coaster_id=coaster_id, rank=rank)
+    db.session.add(new_favorite)
+    db.session.commit()
+    flash('Coaster added successfully!', 'success')
+    return redirect(url_for('dashboard'))
+
 
 def insert_coasters_from_csv(csv_file):
     with open(csv_file, 'r', newline='', encoding='utf-8') as file:
