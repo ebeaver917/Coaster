@@ -137,35 +137,6 @@ def register():
 
     return render_template('register.html', form=form)
 
-'''
-@app.route('/review', methods=['GET', 'POST'])
-@login_required
-def review():
-    search_form = SearchForm()
-    review_form = ReviewForm()
-    coasters = None
-
-    if search_form.validate_on_submit():
-        search_query = search_form.search_query.data
-        coasters = Coaster.query.filter(Coaster.name.ilike(f'%{search_query}%')).all()
-    
-    if 'submit_review' in request.form and review_form.validate_on_submit():
-        coaster_id = request.form.get('coaster_select')
-        if coaster_id:
-            new_review = Review(
-                user_id=current_user.id,
-                coaster_id=coaster_id,
-                rating=review_form.rating.data,
-                content=review_form.content.data
-            )
-            db.session.add(new_review)
-            db.session.commit()
-            flash('Review added successfully!')
-            return redirect(url_for('dashboard'))
-
-    return render_template('review.html', search_form=search_form, review_form=review_form, coasters=coasters)
-'''
-
 @app.route('/coasters/<int:coaster_id>', methods=['GET', 'POST'])
 @login_required
 def coaster_details(coaster_id):
@@ -190,6 +161,46 @@ def coaster_details(coaster_id):
                 .all())
 
     return render_template('coaster_details.html', coaster=coaster, reviews=reviews, review_form=review_form)
+
+@app.route('/delete_review/<int:review_id>', methods=['POST'])
+@login_required
+def delete_review(review_id):
+    review = Review.query.get_or_404(review_id)
+    
+    # Ensure the current user is the owner of the review
+    if review.user_id != current_user.id:
+        flash('You do not have permission to delete this review.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        db.session.delete(review)
+        db.session.commit()
+        flash('Review deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error deleting review.', 'error')
+        print(f"Error: {e}")
+    
+    return redirect(url_for('dashboard'))
+
+@app.route('/delete_account', methods=['POST'])
+@login_required
+def delete_account():
+    user_id = current_user.id
+    
+    Review.query.filter_by(user_id=user_id).delete()
+    
+    User.query.filter_by(id=user_id).delete()
+    
+    try:
+        db.session.commit()
+        flash('Your account has been successfully deleted.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error deleting')
+        
+    return redirect(url_for('home'))
+
 
 def insert_coasters_from_csv(csv_file):
     with open(csv_file, 'r', newline='', encoding='utf-8') as file:
