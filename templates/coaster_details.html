@@ -22,7 +22,7 @@
     <form method="POST">
         {{ review_form.hidden_tag() }}
         {{ review_form.rating.label }} {{ review_form.rating() }}<br>
-        {{ review_form.content.label }} {{ review_form.content() }}<br>
+        {{ "Comments" }} {{ review_form.content() }}<br>
         {{ review_form.submit() }}
     </form>
 

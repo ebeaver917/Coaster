@@ -137,6 +137,7 @@ def register():
 
     return render_template('register.html', form=form)
 
+'''
 @app.route('/review', methods=['GET', 'POST'])
 @login_required
 def review():
@@ -163,6 +164,7 @@ def review():
             return redirect(url_for('dashboard'))
 
     return render_template('review.html', search_form=search_form, review_form=review_form, coasters=coasters)
+'''
 
 @app.route('/coasters/<int:coaster_id>', methods=['GET', 'POST'])
 @login_required

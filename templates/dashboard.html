@@ -22,7 +22,7 @@
             {% for coaster in coasters %}
                 <li>
                     <strong>{{ coaster.name }}</strong> - {{ coaster.park }}, {{ coaster.location }}
-                    <!-- Add any links or actions for each coaster -->
+                    <a href="{{ url_for('coaster_details', coaster_id=coaster.id) }}">View Details</a>
                 </li>
             {% endfor %}
         </ul>
