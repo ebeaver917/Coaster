@@ -150,15 +150,20 @@ def home():
 @login_required
 def dashboard():
     search_form = SearchForm()
-    user_favorites = FavoriteCoaster.query.filter_by(user_id=current_user.id).order_by(FavoriteCoaster.rank).all()
-    
     coasters = None
     if search_form.validate_on_submit():
         search_query = search_form.search_query.data
-        coasters = Coaster.query.filter(Coaster.name.ilike(f'%{search_query}%')).all()
+        #users can query with the name of the ride or the park name
+        coasters = Coaster.query.filter(
+            db.or_(
+                Coaster.name.ilike(f'%{search_query}%'), 
+                Coaster.park.ilike(f'%{search_query}%')
+            )
+        ).all()
 
     user_reviews = Review.query.filter_by(user_id=current_user.id).all()
-    return render_template('dashboard.html', search_form=search_form, coasters=coasters, user_reviews=user_reviews, user_favorites=user_favorites)
+    return render_template('dashboard.html', search_form=search_form, coasters=coasters, user_reviews=user_reviews)
+
 
 #logout route
 @app.route('/logout', methods=['GET', 'POST'])

@@ -22,7 +22,7 @@
     {% if reviews %}
         <ul>
             {% for review, username in reviews %}
-                <li>
+                <li style="margin-bottom: 10px;">
                     <strong>{{ username }}:</strong> Rated {{ review.rating }}/10<br>
                     <em>"{{ review.content }}"</em>
                 </li>
@@ -33,9 +33,15 @@
     {% endif %}
 
     <h3>Write a Review</h3>
-    <form method="POST">
-        {{ "Rating:" }} {{ review_form.rating() }}<br>
-        {{ "Comments:" }} {{ review_form.content() }}<br>
+    <form method="POST" style="margin-bottom: 20px;">
+        <div style="margin-bottom: 10px;">
+            <label>Rating:</label>
+            {{ review_form.rating(size=20) }}
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label>Comments:</label>
+            {{ review_form.content(size=40) }}
+        </div>
         {{ review_form.submit() }}
     </form>
 
