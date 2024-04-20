@@ -34,18 +34,20 @@ class User(db.Model, UserMixin):
 
 class Coaster(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    park = db.Column(db.String(100))
-    location = db.Column(db.String(100))
-    opening_date = db.Column(db.String(20))
-    length = db.Column(db.Float)
-    height = db.Column(db.Float)
-    drop = db.Column(db.Float)
-    speed = db.Column(db.Float)
-    inversions = db.Column(db.Integer)
-    vertical_angle = db.Column(db.Float)
-    duration = db.Column(db.Float)
-    rcdb_link = db.Column(db.String(200))
+    name = db.Column(db.String(255), nullable=False)
+    park = db.Column(db.String(255), nullable=True, default='None')
+    location = db.Column(db.String(255), nullable=True, default='None')
+    opening_date = db.Column(db.String(255), nullable=True, default='None')
+    length = db.Column(db.String(255), nullable=True, default='None')
+    height = db.Column(db.String(255), nullable=True, default='None')
+    drop = db.Column(db.String(255), nullable=True, default='None')
+    speed = db.Column(db.String(255), nullable=True, default='None')
+    inversions = db.Column(db.String(255), nullable=True, default='None')
+    vertical_angle = db.Column(db.String(255), nullable=True, default='None')
+    duration = db.Column(db.String(255), nullable=True, default='None')
+    rcdb_link = db.Column(db.String(255), nullable=True, default='None')
+    
+    __table_args__ = (db.UniqueConstraint('name', 'park', name='_name_park_uc'),)
     
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -295,63 +297,66 @@ def reset_favorites():
     
     return redirect(url_for('dashboard'))
 
+import csv
+from sqlalchemy.exc import IntegrityError
+
+import csv
+from sqlalchemy.exc import IntegrityError
+
+import csv
+from sqlalchemy.exc import IntegrityError
+
 def insert_coasters_from_csv(csv_file):
     with open(csv_file, 'r', newline='', encoding='utf-8') as file:
         csv_reader = csv.DictReader(file)
-        id=0
         for row in csv_reader:
-            name = row['Name'].strip()
-            park = row.get('Park', '').strip()
-            location = row.get('Location', '').strip()
+            # Extract and strip all necessary fields
+            name = row.get('Name', 'None').strip()
+            park = row.get('Park', 'None').strip()
+            location = row.get('Location', 'None').strip()
+            opening_date = row.get('Opening Date', 'None').strip()
+            length = row.get('Length', 'None').strip()
+            height = row.get('Height', 'None').strip()
+            drop = row.get('Drop', 'None').strip()
+            speed = row.get('Speed', 'None').strip()
+            inversions = row.get('Inversions', 'None').strip()
+            vertical_angle = row.get('Vertical Angle', 'None').strip()
+            duration = row.get('Duration', 'None').strip()
+            rcdb_link = row.get('RCDB Link', 'None').strip()
 
+            # Check if the coaster already exists to prevent duplicates
             if Coaster.query.filter_by(name=name, park=park, location=location).first():
-                continue 
+                print(f"Skipped duplicate entry for {name} in {park} at {location}.")
+                continue  # Skip if this coaster already exists
 
-            try:
-                length = float(row['Length']) if row['Length'].strip() else None
-                height = float(row['Height']) if row['Height'].strip() else None
-                drop = float(row['Drop']) if row['Drop'].strip() else None
-                speed = float(row['Speed']) if row['Speed'].strip() else None
-                inversions = int(row['Inversions']) if row['Inversions'].strip() else None
-                vertical_angle = float(row['Vertical Angle']) if row['Vertical Angle'].strip() else None
-                duration = float(row['Duration']) if row['Duration'].strip() else None
-            except ValueError:
-                length = None
-                height = None
-                drop = None
-                speed = None
-                inversions = None
-                vertical_angle = None
-                duration = None
-
+            # Create a new coaster instance with all fields
             coaster = Coaster(
-                id=id,
                 name=name,
                 park=park,
                 location=location,
-                opening_date=row.get('Opening Date', '').strip() or None,
-                length=length,
-                height=height,
-                drop=drop,
-                speed=speed,
-                inversions=inversions,
-                vertical_angle=vertical_angle,
-                duration=duration,
-                rcdb_link=row.get('RCDB Link', '').strip() or None
+                opening_date=opening_date if opening_date != 'None' else None,
+                length=length if length != 'None' else None,
+                height=height if height != 'None' else None,
+                drop=drop if drop != 'None' else None,
+                speed=speed if speed != 'None' else None,
+                inversions=inversions if inversions != 'None' else None,
+                vertical_angle=vertical_angle if vertical_angle != 'None' else None,
+                duration=duration if duration != 'None' else None,
+                rcdb_link=rcdb_link if rcdb_link != 'None' else None
             )
-            id += 1
+
             try:
                 db.session.add(coaster)
                 db.session.commit()
             except IntegrityError:
                 db.session.rollback()
+                print(f"Integrity error occurred while inserting {name} at {park} in {location}.")
             except Exception as e:
-                print(f"Failed to insert {name} at {park} in {location}: {e}")
                 db.session.rollback()
-
+                print(f"Failed to insert {name} at {park} in {location}: {e}")
 
 if __name__ == "__main__": 
     with app.app_context(): 
         db.create_all() 
-        insert_coasters_from_csv('every_operating_coaster.csv')
+        #insert_coasters_from_csv('every_operating_coaster.csv')
     app.run(debug=True)

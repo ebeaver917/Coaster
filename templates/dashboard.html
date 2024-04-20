@@ -67,7 +67,7 @@
     <h3>Your Favorite Roller Coasters:</h3>
     <ol>
         {% for favorite in user_favorites %}
-        <li>{{ favorite.coaster.name }} at {{ favorite.coaster.park }} - Rank: {{ favorite.rank }}</li>
+        <li>{{ favorite.coaster.name }} - {{ favorite.coaster.park }} - {{favorite.coaster.location}}</li>
         {% endfor %}
     </ol>
 
