@@ -153,7 +153,7 @@ def dashboard():
     coasters = None
     if search_form.validate_on_submit():
         search_query = search_form.search_query.data
-        #users can query with the name of the ride or the park name
+        #user can query based on park name or coaster
         coasters = Coaster.query.filter(
             db.or_(
                 Coaster.name.ilike(f'%{search_query}%'), 
@@ -163,7 +163,6 @@ def dashboard():
 
     user_reviews = Review.query.filter_by(user_id=current_user.id).all()
     return render_template('dashboard.html', search_form=search_form, coasters=coasters, user_reviews=user_reviews)
-
 
 #logout route
 @app.route('/logout', methods=['GET', 'POST'])
