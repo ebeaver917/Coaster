@@ -18,14 +18,6 @@
     <p><strong>Duration:</strong> {{ coaster.duration }} minutes</p>
     <p><strong>RCDB Link:</strong> <a href="{{ coaster.rcdb_link }}" target="_blank">View on RCDB</a></p>
 
-    <h3>Write a Review</h3>
-    <form method="POST">
-        {{ review_form.hidden_tag() }}
-        {{ review_form.rating.label }} {{ review_form.rating() }}<br>
-        {{ "Comments" }} {{ review_form.content() }}<br>
-        {{ review_form.submit() }}
-    </form>
-
     <h3>Reviews:</h3>
     {% if reviews %}
         <ul>
@@ -39,6 +31,13 @@
     {% else %}
         <p>No reviews yet. Be the first to write one!</p>
     {% endif %}
+
+    <h3>Write a Review</h3>
+    <form method="POST">
+        {{ "Rating:" }} {{ review_form.rating() }}<br>
+        {{ "Comments:" }} {{ review_form.content() }}<br>
+        {{ review_form.submit() }}
+    </form>
 
     <hr>
     <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>

@@ -7,6 +7,9 @@
         function confirmDelete() {
             return confirm('Are you sure you want to delete this review?');
         }
+        function confirmDeleteAccount() {
+            return confirm('Are you sure you want to permanently delete your account? This action cannot be undone and will delete all associated reviews.');
+        }
     </script>
 </head>
 <body>
@@ -22,16 +25,25 @@
 
     <!-- Display Search Results -->
     {% if coasters %}
-    <h3>Search Results:</h3>
-        <ul>
-            {% for coaster in coasters %}
+        <h3>Search Results:</h3>
+            <ul>
+                {% for coaster in coasters %}
                 <li>
                     <strong>{{ coaster.name }}</strong> - {{ coaster.park }}, {{ coaster.location }}
-                    <a href="{{ url_for('coaster_details', coaster_id=coaster.id) }}">View Details</a>
+                    <!-- Form to view coaster details -->
+                    <form action="{{ url_for('coaster_details', coaster_id=coaster.id) }}" method="get" style="display: inline;">
+                        <button type="submit">View Details</button>
+                    </form>
+                    {% if user_favorites|length < 10 and coaster.id not in user_favorites|map(attribute='coaster_id')|list %}
+                    | <form action="{{ url_for('add_favorite', coaster_id=coaster.id) }}" method="post" style="display: inline;">
+                        <button type="submit">Add to Top 10</button>
+                    </form>
+                    {% endif %}
                 </li>
-            {% endfor %}
-        </ul>
+                {% endfor %}
+            </ul>
     {% endif %}
+
 
     <!-- Display User Reviews -->
     <h3>Your Reviews:</h3>
@@ -42,7 +54,6 @@
                     <strong>Coaster:</strong> {{ review.coaster.name }}<br>
                     <strong>Rating:</strong> {{ review.rating }}/10<br>
                     <strong>Comment:</strong> {{ review.content }}<br>
-                    <!-- Delete button for the review with confirmation -->
                     <form action="{{ url_for('delete_review', review_id=review.id) }}" method="POST">
                         <button type="submit" onclick="return confirmDelete();">Delete Review</button>
                     </form>
@@ -53,7 +64,27 @@
         <p>You have not written any reviews yet.</p>
     {% endif %}
 
-    <hr>
-    <a href="{{ url_for('logout') }}">Logout</a>
+    <h3>Your Favorite Roller Coasters:</h3>
+    <ol>
+        {% for favorite in user_favorites %}
+        <li>{{ favorite.coaster.name }} at {{ favorite.coaster.park }} - Rank: {{ favorite.rank }}</li>
+        {% endfor %}
+    </ol>
+
+    <!-- Account Management Buttons -->
+    <div style="margin-top: 20px;">
+        <form action="{{ url_for('delete_account') }}" method="POST" style="display: inline;">
+            <button type="submit" onclick="return confirmDeleteAccount();">Delete My Account</button>
+        </form>
+        |
+        <form action="{{ url_for('logout') }}" method="POST" style="display: inline;">
+            <button type="submit">Logout</button>
+        </form>
+        |
+        <form action="{{ url_for('reset_favorites') }}" method="POST" style="display: inline;">
+            <button type="submit" onclick="return confirm('Are you sure you want to reset your top 10 favorites? This action cannot be undone.');">Reset Top 10 Favorites</button>
+        </form>
+    </div>
+
 </body>
 </html>

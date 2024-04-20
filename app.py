@@ -8,7 +8,7 @@ from flask_bcrypt import Bcrypt
 import csv
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
-
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 
@@ -30,6 +30,7 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), nullable=False, unique=True)
     password = db.Column(db.String(80), nullable=False)
+    reviews = db.relationship('Review', backref='user', lazy=True, cascade='all, delete-orphan')
 
 class Coaster(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -50,11 +51,21 @@ class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     coaster_id = db.Column(db.Integer, db.ForeignKey('coaster.id'), nullable=False)
-    rating = db.Column(db.Integer, nullable=False) 
+    rating = db.Column(db.Integer, nullable=False)
     content = db.Column(db.Text, nullable=False)
-
-    user = db.relationship('User', backref=db.backref('reviews', lazy=True))
     coaster = db.relationship('Coaster', backref=db.backref('reviews', lazy=True))
+    
+class FavoriteCoaster(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    coaster_id = db.Column(db.Integer, db.ForeignKey('coaster.id'), nullable=False)
+    rank = db.Column(db.Integer, nullable=False)  # Rank from 1 to 10
+
+    user = db.relationship('User', backref=db.backref('favorite_coasters', lazy='dynamic'))
+    coaster = db.relationship('Coaster', backref='favorited_by')
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'rank', name='_user_rank_uc'),)
+
     
 class RegisterForm(FlaskForm):
     username = StringField(validators=[
@@ -110,14 +121,18 @@ def home():
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
-    search_form = SearchForm() 
-    coasters = None  
+    search_form = SearchForm()
+    user_favorites = FavoriteCoaster.query.filter_by(user_id=current_user.id).order_by(FavoriteCoaster.rank).all()
+    
+    coasters = None
     if search_form.validate_on_submit():
         search_query = search_form.search_query.data
         coasters = Coaster.query.filter(Coaster.name.ilike(f'%{search_query}%')).all()
 
     user_reviews = Review.query.filter_by(user_id=current_user.id).all()
-    return render_template('dashboard.html', search_form=search_form, coasters=coasters, user_reviews=user_reviews)
+    return render_template('dashboard.html', search_form=search_form, coasters=coasters, user_reviews=user_reviews, user_favorites=user_favorites)
+
+
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
@@ -141,26 +156,42 @@ def register():
 @login_required
 def coaster_details(coaster_id):
     coaster = Coaster.query.get_or_404(coaster_id)
+    existing_review = Review.query.filter_by(user_id=current_user.id, coaster_id=coaster_id).first()
     review_form = ReviewForm()
 
-    if review_form.validate_on_submit():
-        new_review = Review(
-            user_id=current_user.id,
-            coaster_id=coaster_id,
-            rating=review_form.rating.data,
-            content=review_form.content.data
-        )
-        db.session.add(new_review)
-        db.session.commit()
-        flash('Review added successfully!')
-        return redirect(url_for('coaster_details', coaster_id=coaster_id))
+    if request.method == 'POST':
+        if review_form.validate_on_submit():
+            if existing_review:
+                print("balls")
+                existing_review.rating = review_form.rating.data
+                existing_review.content = review_form.content.data
+                flash('Review updated successfully!', 'success')
+            else:
+                # Create a new review if none exists
+                new_review = Review(
+                    user_id=current_user.id,
+                    coaster_id=coaster_id,
+                    rating=review_form.rating.data,
+                    content=review_form.content.data
+                )
+                db.session.add(new_review)
+                flash('Review added successfully!', 'success')
+            db.session.commit()
+            return redirect(url_for('coaster_details', coaster_id=coaster_id))
+        else:
+            for fieldName, errorMessages in review_form.errors.items():
+                for err in errorMessages:
+                    flash(f"{fieldName}: {err}", 'error')
+
+    review_form.rating.data = existing_review.rating if existing_review else None
+    review_form.content.data = existing_review.content if existing_review else None
 
     reviews = (db.session.query(Review, User.username)
-                .join(User, User.id == Review.user_id)
-                .filter(Review.coaster_id == coaster_id)
-                .all())
+               .join(User, User.id == Review.user_id)
+               .filter(Review.coaster_id == coaster_id)
+               .all())
 
-    return render_template('coaster_details.html', coaster=coaster, reviews=reviews, review_form=review_form)
+    return render_template('coaster_details.html', coaster=coaster, review_form=review_form, reviews=reviews)
 
 @app.route('/delete_review/<int:review_id>', methods=['POST'])
 @login_required
@@ -186,21 +217,83 @@ def delete_review(review_id):
 @app.route('/delete_account', methods=['POST'])
 @login_required
 def delete_account():
-    user_id = current_user.id
-    
-    Review.query.filter_by(user_id=user_id).delete()
-    
-    User.query.filter_by(id=user_id).delete()
-    
+    user = current_user
+    db.session.delete(user)
     try:
         db.session.commit()
         flash('Your account has been successfully deleted.', 'success')
     except Exception as e:
         db.session.rollback()
-        flash('Error deleting')
-        
+        flash(f'Error deleting account: {str(e)}', 'error')
+    logout_user()
     return redirect(url_for('home'))
 
+@app.route('/add_favorite/<int:coaster_id>', methods=['POST'])
+@login_required
+def add_favorite(coaster_id):
+    current_favorites = FavoriteCoaster.query.filter_by(user_id=current_user.id).order_by(FavoriteCoaster.rank).all()
+    if len(current_favorites) >= 10:
+        flash('You already have 10 favorite coasters. Remove one before adding another.', 'error')
+        return redirect(url_for('dashboard'))
+
+    if any(fav.coaster_id == coaster_id for fav in current_favorites):
+        flash('This coaster is already in your top 10 favorites.', 'error')
+        return redirect(url_for('dashboard'))
+
+    new_rank = len(current_favorites) + 1
+    new_favorite = FavoriteCoaster(user_id=current_user.id, coaster_id=coaster_id, rank=new_rank)
+    db.session.add(new_favorite)
+    try:
+        db.session.commit()
+        flash('Coaster added to your favorites at rank #' + str(new_rank) + '!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding coaster to favorites: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/remove_favorite/<int:coaster_id>', methods=['POST'])
+@login_required
+def remove_favorite(coaster_id):
+    favorite_to_remove = FavoriteCoaster.query.filter_by(user_id=current_user.id, coaster_id=coaster_id).first()
+    if not favorite_to_remove:
+        flash('This coaster is not in your top 10 favorites.', 'error')
+        return redirect(url_for('dashboard'))
+
+
+    db.session.delete(favorite_to_remove)
+    following_favorites = FavoriteCoaster.query.filter(
+        FavoriteCoaster.user_id == current_user.id,
+        FavoriteCoaster.rank > favorite_to_remove.rank
+    ).order_by(FavoriteCoaster.rank).all()
+
+    for favorite in following_favorites:
+        favorite.rank -= 1  # Decrement ranks of all subsequent favorites
+
+    try:
+        db.session.commit()
+        flash('Coaster removed from your favorites.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error removing coaster from favorites: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+@app.route('/reset_favorites', methods=['POST'])
+@login_required
+def reset_favorites():
+    # Remove all favorite coasters for the current user
+    try:
+        FavoriteCoaster.query.filter_by(user_id=current_user.id).delete()
+        db.session.commit()
+        flash('All your favorite coasters have been reset.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Failed to reset favorite coasters.', 'error')
+        print(f"Error: {e}")
+    
+    return redirect(url_for('dashboard'))
 
 def insert_coasters_from_csv(csv_file):
     with open(csv_file, 'r', newline='', encoding='utf-8') as file:
