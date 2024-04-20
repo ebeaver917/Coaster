@@ -23,14 +23,12 @@
         {{ search_form.submit() }}
     </form>
 
-    <!-- Display Search Results -->
     {% if coasters %}
         <h3>Search Results:</h3>
             <ul>
                 {% for coaster in coasters %}
                 <li>
                     <strong>{{ coaster.name }}</strong> - {{ coaster.park }}, {{ coaster.location }}
-                    <!-- Form to view coaster details -->
                     <form action="{{ url_for('coaster_details', coaster_id=coaster.id) }}" method="get" style="display: inline;">
                         <button type="submit">View Details</button>
                     </form>
@@ -45,7 +43,6 @@
     {% endif %}
 
 
-    <!-- Display User Reviews -->
     <h3>Your Reviews:</h3>
     {% if user_reviews %}
         <ul>
@@ -71,7 +68,6 @@
         {% endfor %}
     </ol>
 
-    <!-- Account Management Buttons -->
     <div style="margin-top: 20px;">
         <form action="{{ url_for('delete_account') }}" method="POST" style="display: inline;">
             <button type="submit" onclick="return confirmDeleteAccount();">Delete My Account</button>
