@@ -6,7 +6,7 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         ul { padding-left: 20px; }
-        li { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #ccc; } /* Added padding and a bottom border for separation */
+        li { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #ccc; }
         form { margin-top: 5px; }
         .account-actions { margin-top: 20px; }
     </style>
@@ -29,7 +29,7 @@
     {% if reviews %}
         <ul>
             {% for review, username in reviews %}
-                <li style="margin-bottom: 10px;">
+                <li>
                     <strong>{{ username }}:</strong> Rated {{ review.rating }}/10<br>
                     <em>"{{ review.content }}"</em>
                 </li>
@@ -40,14 +40,15 @@
     {% endif %}
 
     <h3>Write a Review</h3>
-    <form method="POST" style="margin-bottom: 20px;">
+    <form action="{{ url_for('coaster_details', coaster_id=coaster.id) }}" method="POST">
+        {{ review_form.hidden_tag() }}
         <div style="margin-bottom: 10px;">
             <label>Rating:</label>
-            {{ review_form.rating(size=20) }}
+            {{ review_form.rating(size=20) }}  
         </div>
         <div style="margin-bottom: 20px;">
             <label>Comments:</label>
-            {{ review_form.content(size=40) }}
+            {{ review_form.content(size=40) }}  
         </div>
         {{ review_form.submit() }}
     </form>
