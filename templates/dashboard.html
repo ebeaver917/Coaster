@@ -56,22 +56,26 @@
     </form>
 
     {% if coasters %}
-        <h3>Search Results:</h3>
-            <ul>
-                {% for coaster in coasters %}
-                <li>
-                    <strong>{{ coaster.name }}</strong> - {{ coaster.park }}, {{ coaster.location }}
-                    <form action="{{ url_for('coaster_details', coaster_id=coaster.id) }}" method="get" style="display: inline;">
-                        <button type="submit" class="button-style">View Details</button>
-                    </form>
-                    {% if user_favorites|length < 10 and coaster.id not in user_favorites|map(attribute='coaster_id')|list %}
-                     <form action="{{ url_for('add_favorite', coaster_id=coaster.id) }}" method="post" style="display: inline;">
-                        <button type="submit" class="button-style">Add to Top 10</button>
-                    </form>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
+    <h3>Search Results:</h3>
+    <ul>
+        {% for coaster in coasters %}
+        <li>
+            <strong>{{ coaster.name }}</strong> - {{ coaster.park }}, {{ coaster.location }}
+            <form action="{{ url_for('coaster_details', coaster_id=coaster.id) }}" method="get" style="display: inline;">
+                <button type="submit" class="button-style">View Details</button>
+            </form>
+            {% if coaster.is_favorite %}
+            <form action="{{ url_for('remove_favorite', coaster_id=coaster.id) }}" method="post" style="display: inline;">
+                <button type="submit" class="button-style">Remove from Top 10</button>
+            </form>
+            {% else %}
+            <form action="{{ url_for('add_favorite', coaster_id=coaster.id) }}" method="post" style="display: inline;">
+                <button type="submit" class="button-style">Add to Top 10</button>
+            </form>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
     {% endif %}
 
 
@@ -95,10 +99,11 @@
 
     <h3>Your Favorite Roller Coasters:</h3>
     <ol>
-        {% for favorite in user_favorites %}
-        <li>{{ favorite.coaster.name }} - {{ favorite.coaster.park }} - {{favorite.coaster.location}}</li>
+        {% for coaster in favorite_coasters_details %}
+            <li>{{ coaster.name }} - {{ coaster.park }} - {{ coaster.location }}</li>
         {% endfor %}
     </ol>
+
 
     <div class="account-actions">
         <form action="{{ url_for('delete_account') }}" method="POST" style="display: inline;">
